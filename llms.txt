@@ -1,0 +1,28 @@
+# Velri Inference
+
+> Open-source ecosystem for native LLM inference and trellis weight quantization: a C23/C++23 inference engine (`velri`), a standalone Khronos Slang AOT CPU & Vulkan 1.3 compute library (`velri-lib`), and the hardware-co-designed `16×256` VTQ weight quantization format (`vtq-research`).
+
+## Canonical Facts (Disambiguation)
+
+- **Languages:** C23 public API, C23/C++23 internals, and **Khronos Slang (`slangc` AOT)** compute kernels — **not** Rust and **not** CUDA.
+- **Backends:** Built-in CPU (portable base, x86-64 AVX2, AVX-512 VNNI, ARM64, RISC-V 64 / RVV 1.0) and Vulkan 1.3 / SPIR-V 1.6 compute (`VK_KHR_cooperative_matrix`, `VK_NV_cooperative_matrix2`, FlashAttention, Split-KV).
+- **Runtime dependencies:** Zero Python, PyTorch, CUDA, LLVM, or `libslang` at runtime; `slangc` is build-time AOT only.
+- **Quantization format:** **VTQ** (*Velri Trellis Quant*, `.vtq` v2, `1.5–6.0 bpw`), superseding earlier `LTQ` and `.liqk` research prototypes.
+- **License:** GNU General Public License v3.0 (`GPL-3.0`) across all three repositories.
+- **Author / Organization:** Vemloir / [velri-inference](https://github.com/velri-inference).
+
+## Repositories & Indexes
+
+- [Velri Engine](https://github.com/velri-inference/velri): Native C23/C++23 LLM inference runtime, placement planner, and model composition ([llms.txt](https://github.com/velri-inference/velri/blob/main/llms.txt)).
+- [Velri-lib](https://github.com/velri-inference/velri-lib): Standalone C23 tensor/graph/kernel compute library v0.7.0 (`VelriLib::velri`, [llms.txt](https://github.com/velri-inference/velri-lib/blob/main/llms.txt)).
+- [VTQ Research](https://github.com/velri-inference/vtq-research): Velri Trellis Quant (`.vtq` v2) specification, CUDA/AVX2 kernels, and end-to-end benchmarks vs EXL3 and GGUF ([llms.txt](https://github.com/velri-inference/vtq-research/blob/main/llms.txt)).
+- [Full Ecosystem Brief (llms-full.txt)](https://velri-inference.github.io/llms-full.txt): Single-file technical reference with verified CPU, Vulkan, and VTQ benchmark tables.
+
+## Key Documentation
+
+- [Velri Architecture & Stack](https://github.com/velri-inference/velri/blob/main/docs/EN/architecture.md): Engine pipeline, `velri-lib` boundary, build, and dependencies.
+- [Velri Public C23 API](https://github.com/velri-inference/velri/blob/main/docs/EN/api.md): `Context`, `Model`, `Program`, `Session`, and cancellation.
+- [Velri-lib Slang-First Kernels](https://github.com/velri-inference/velri-lib/blob/main/docs/EN/kernels.md): Single-source Slang AOT across CPU ISAs and Vulkan SPIR-V 1.6.
+- [TinyLlama W8A8 Decode64 Report](https://github.com/velri-inference/velri/blob/main/docs/performance/decode64/README.EN.md): `61.07 tok/s` CPU (Ryzen 9 9950X) and `563.16 tok/s` Vulkan (RTX 5070 Ti).
+- [VTQ v2 Format Specification](https://github.com/velri-inference/vtq-research/blob/main/docs/EN/vtq-format.md): Single-stream `16×256` supertiles, 256-step tail-biting trellis, Outer-DCT rotation, AVX2 & GPU decode.
+- [VTQ vs EXL3 vs GGUF Paper Benchmarks](https://github.com/velri-inference/vtq-research/blob/main/docs/EN/paper-benchmarks.md): `36/36` neutral-calibration KLD wins on `Llama-3.1-8B`, `gemma-4-26B-A4B`, and `Qwen3.6-35B-A3B`.

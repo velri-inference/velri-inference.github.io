@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Velri — Native C23 &amp; Khronos Slang LLM Inference Engine &amp; VTQ Quantization</title>
+  <meta name="description" content="Velri is an open-source C23/C++23 LLM inference engine with Khronos Slang AOT kernels for CPU and Vulkan 1.3, plus VTQ trellis weight quantization (36/36 KLD wins vs EXL3 &amp; GGUF).">
+  <meta name="author" content="Vemloir">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://velri-inference.github.io/">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate" type="text/markdown" title="Velri LLMs Index" href="https://velri-inference.github.io/llms.txt">
+  <link rel="alternate" type="text/markdown" title="Velri Complete LLM Technical Brief" href="https://velri-inference.github.io/llms-full.txt">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Velri Inference">
+  <meta property="og:title" content="Velri — Native C23 &amp; Khronos Slang LLM Inference Engine &amp; VTQ Quantization">
+  <meta property="og:description" content="Native C23/C++23 + Khronos Slang AOT inference engine (CPU AVX2/AVX-512/ARM64/RISC-V &amp; Vulkan 1.3) and VTQ 16×256 trellis quantization outperforming EXL3 &amp; GGUF.">
+  <meta property="og:url" content="https://velri-inference.github.io/">
+  <meta property="og:image" content="https://velri-inference.github.io/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Velri Inference — Native C23 &amp; Khronos Slang AOT LLM Inference and VTQ Trellis Quantization">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Velri — Native C23 &amp; Khronos Slang LLM Inference &amp; VTQ Quantization">
+  <meta name="twitter:description" content="563 tok/s Vulkan 1.3 · 17.9 TOPS AVX-512 VNNI · VTQ 36/36 KLD wins vs EXL3 &amp; GGUF. Zero Python, PyTorch, or CUDA at runtime.">
+  <meta name="twitter:image" content="https://velri-inference.github.io/og-card.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://velri-inference.github.io/#org",
+        "name": "Velri Inference",
+        "url": "https://velri-inference.github.io/",
+        "logo": "https://velri-inference.github.io/favicon.svg",
+        "sameAs": [
+          "https://github.com/velri-inference",
+          "https://github.com/velri-inference/velri",
+          "https://github.com/velri-inference/velri-lib",
+          "https://github.com/velri-inference/vtq-research"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://velri-inference.github.io/#website",
+        "name": "Velri Inference",
+        "url": "https://velri-inference.github.io/",
+        "publisher": { "@id": "https://velri-inference.github.io/#org" }
+      },
+      {
+        "@type": "SoftwareSourceCode",
+        "@id": "https://github.com/velri-inference/velri",
+        "name": "Velri",
+        "version": "0.2.0",
+        "description": "Native neural-network and LLM inference engine for Linux, Windows, and Android written in C23 and C++23 with Khronos Slang AOT kernels for CPU and Vulkan 1.3, designed for VRAM offloading with zero runtime Python, PyTorch, CUDA, or compiler dependencies.",
+        "codeRepository": "https://github.com/velri-inference/velri",
+        "url": "https://velri-inference.github.io/",
+        "programmingLanguage": ["C23", "C++23", "Khronos Slang"],
+        "operatingSystem": ["Linux", "Windows", "Android", "macOS"],
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "author": { "@type": "Person", "name": "Vemloir" },
+        "publisher": { "@id": "https://velri-inference.github.io/#org" },
+        "keywords": "LLM inference engine, C23, Khronos Slang, Vulkan compute, SPIR-V, AVX-512 VNNI, VRAM offloading, VTQ quantization"
+      },
+      {
+        "@type": "SoftwareSourceCode",
+        "@id": "https://github.com/velri-inference/velri-lib",
+        "name": "Velri-lib",
+        "version": "0.7.0",
+        "description": "Standalone C23 neural-network computation library providing zero-copy tensor views, liveness scratch memory planning, UMA-aware execution graphs, 23 Khronos Slang AOT CPU kernels, and 29 spirv-val-verified Vulkan 1.3 SPIR-V 1.6 shaders.",
+        "codeRepository": "https://github.com/velri-inference/velri-lib",
+        "programmingLanguage": ["C23", "Khronos Slang"],
+        "operatingSystem": ["Linux", "Windows", "Android", "macOS"],
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "author": { "@type": "Person", "name": "Vemloir" },
+        "publisher": { "@id": "https://velri-inference.github.io/#org" },
+        "keywords": "C23 compute library, Khronos Slang AOT, BLIS GEMM, AVX-512 VNNI, Vulkan Cooperative Matrix, FlashAttention, Split-KV, RISC-V RVV, ARM64"
+      },
+      {
+        "@type": "SoftwareSourceCode",
+        "@id": "https://github.com/velri-inference/vtq-research",
+        "name": "VTQ — Velri Trellis Quant",
+        "version": "2.0.0",
+        "description": "Hardware-co-designed 16x256 supertile Ungerboeck trellis weight quantization format (.vtq v2, 1.5-6.0 bpw) targeting AVX2 CPUs (vpshufb) and GPUs (FP32 and DP4A INT8, up to 1,476.9 GB/s / 96.4% HBM on RTX PRO 6000 Blackwell), winning 36/36 neutral-calibration KLD cells against EXL3 and GGUF.",
+        "codeRepository": "https://github.com/velri-inference/vtq-research",
+        "programmingLanguage": ["Python", "C", "C++", "CUDA"],
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "author": { "@type": "Person", "name": "Vemloir" },
+        "publisher": { "@id": "https://velri-inference.github.io/#org" },
+        "keywords": "VTQ, Velri Trellis Quant, LLM quantization, trellis coded quantization, EXL3 alternative, GGUF imatrix, MoE quantization, AVX2 vpshufb, CUDA Blackwell"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What programming languages are Velri and Velri-lib written in?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Velri and Velri-lib are written in C23 and C++23 behind a public C23 API, with GPU and CPU compute kernels written in Khronos Slang and compiled ahead of time (slangc AOT). Velri is not written in Rust and does not require CUDA, Python, PyTorch, or a runtime shader/LLVM compiler."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does VTQ (Velri Trellis Quant) compare to EXL3 and GGUF?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Across 36/36 domain-neutral calibration cells spanning Llama-3.1-8B-Instruct, gemma-4-26B-A4B-it, and Qwen3.6-35B-A3B at 2.5 to 6.0 bpw across three disjoint traces, VTQ (.vtq v2) achieves strictly lower teacher-forced KL divergence than both EXL3 (mul1) and GGUF (imatrix)—including 47% to 58% lower KLD than EXL3 on gemma-4-26B—while quantizing 1.3x to 5.1x faster than EXL3 and reaching 1,476.9 GB/s (96.4% peak HBM) on RTX PRO 6000 Blackwell."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does VTQ require AVX-512 on CPU?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. VTQ's 16x256 supertiles and codebooks are co-designed for AVX2 vpshufb (-mno-avx512f) without vpblendvb or runtime Galois popcounts, sharing the exact same binary layout across disk, CPU, and GPU."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the relationship between VTQ and LTQ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "LTQ and .liqk were earlier quantization prototypes preserved in vtq-research for reproducibility. VTQ (.vtq v2) is the current production quantization format for the Velri ecosystem."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What license do Velri, Velri-lib, and VTQ use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "All three repositories (velri, velri-lib, and vtq-research) are open source under the GNU General Public License v3.0 (GPL-3.0)."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #070b14;
+      --surface: #0f172a;
+      --surface-2: #111c33;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --heading: #f8fafc;
+      --accent: #38bdf8;
+      --accent-2: #818cf8;
+      --green: #34d399;
+      --code-bg: #0b1222;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-2: #f1f5f9;
+        --border: #cbd5e1;
+        --text: #1e293b;
+        --muted: #475569;
+        --heading: #0f172a;
+        --accent: #0284c7;
+        --accent-2: #4f46e5;
+        --green: #059669;
+        --code-bg: #eef2f7;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 0;
+      background: var(--surface);
+    }
+    .nav {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      align-items: center; justify-content: space-between;
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 1.1rem; color: var(--heading);
+    }
+    .nav-links { display: flex; flex-wrap: wrap; gap: 18px; font-size: 0.95rem; }
+    .hero { padding: 64px 0 40px; }
+    .badge {
+      display: inline-block; padding: 4px 12px; border-radius: 999px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      font-size: 0.85rem; color: var(--accent); margin-bottom: 16px;
+    }
+    h1 {
+      margin: 0 0 18px; font-size: clamp(2rem, 4.5vw, 3.1rem);
+      line-height: 1.15; color: var(--heading); letter-spacing: -0.02em;
+    }
+    .lead {
+      max-width: 820px; font-size: 1.12rem; color: var(--muted); margin: 0 0 28px;
+    }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 36px; }
+    .btn {
+      display: inline-block; padding: 10px 18px; border-radius: 8px;
+      font-weight: 600; font-size: 0.95rem; border: 1px solid var(--border);
+      background: var(--surface); color: var(--heading);
+    }
+    .btn.primary {
+      background: var(--accent); color: #070b14; border-color: var(--accent);
+    }
+    .btn:hover { text-decoration: none; opacity: 0.92; }
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px; margin-top: 12px;
+    }
+    .stat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px 20px;
+    }
+    .stat .val { font-size: 1.65rem; font-weight: 700; color: var(--heading); }
+    .stat .val.cyan { color: var(--accent); }
+    .stat .val.indigo { color: var(--accent-2); }
+    .stat .val.green { color: var(--green); }
+    .stat .lbl { font-size: 0.88rem; color: var(--muted); margin-top: 4px; }
+    section { padding: 36px 0; border-top: 1px solid var(--border); }
+    h2 { margin: 0 0 12px; font-size: 1.6rem; color: var(--heading); }
+    h3 { margin: 22px 0 10px; font-size: 1.15rem; color: var(--heading); }
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 18px; margin-top: 18px;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 22px; display: flex; flex-direction: column;
+    }
+    .card h3 { margin: 0 0 8px; }
+    .card p { margin: 0 0 14px; color: var(--muted); font-size: 0.96rem; flex: 1; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .tag {
+      font-size: 0.78rem; padding: 2px 8px; border-radius: 6px;
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    }
+    .table-wrap { overflow-x: auto; margin: 14px 0 8px; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 0.93rem;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    }
+    th, td {
+      padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+    }
+    th { background: var(--surface-2); color: var(--heading); font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9rem;
+    }
+    pre {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; overflow-x: auto; margin: 12px 0;
+    }
+    .faq-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 20px; margin-bottom: 12px;
+    }
+    .faq-item h3 { margin: 0 0 6px; font-size: 1.04rem; }
+    .faq-item p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    footer {
+      border-top: 1px solid var(--border); padding: 28px 0 44px;
+      color: var(--muted); font-size: 0.9rem;
+    }
+    .footer-row {
+      display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="/">
+        <img src="/favicon.svg" alt="" width="28" height="28">
+        Velri Inference
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#ecosystem">Repositories</a>
+        <a href="#benchmarks">Benchmarks</a>
+        <a href="#quickstart">Quick Start</a>
+        <a href="#faq">FAQ</a>
+        <a href="/llms.txt">llms.txt</a>
+        <a href="https://github.com/velri-inference">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero" style="border-top:none;">
+      <span class="badge">C23 / C++23 · Khronos Slang AOT · CPU &amp; Vulkan 1.3 · GPL-3.0</span>
+      <h1>Native LLM Inference &amp; Hardware-Co-Designed Trellis Quantization</h1>
+      <p class="lead">
+        <strong>Velri</strong> is an open-source neural-network inference stack built for models whose weights exceed GPU VRAM.
+        One composable <strong>Khronos Slang</strong> kernel codebase compiles ahead of time (AOT) for
+        <strong>CPU</strong> (AVX2, AVX-512 VNNI, ARM64, RISC-V 64) and <strong>Vulkan 1.3 / SPIR-V 1.6</strong>, paired with
+        <strong>VTQ</strong> (<em>Velri Trellis Quant</em>, 1.5–6.0 bpw) — with zero Python, PyTorch, CUDA, LLVM, or Slang runtime dependencies.
+      </p>
+      <div class="cta-row">
+        <a class="btn primary" href="https://github.com/velri-inference/velri">Velri Engine</a>
+        <a class="btn" href="https://github.com/velri-inference/velri-lib">Velri-lib (C23 Compute)</a>
+        <a class="btn" href="https://github.com/velri-inference/vtq-research">VTQ Quantization</a>
+        <a class="btn" href="/llms-full.txt">LLM Technical Brief</a>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <div class="val cyan">563.16 tok/s</div>
+          <div class="lbl">RTX 5070 Ti Vulkan 1.3 · TinyLlama-1.1B W8A8 (61.07 tok/s on 9950X CPU)</div>
+        </div>
+        <div class="stat">
+          <div class="val indigo">17.87 TOPS</div>
+          <div class="lbl">Ryzen 9 9950X AVX-512 VNNI W8A8 · 4.20 TFLOPS BF16 · 2.05 TFLOPS FP64</div>
+        </div>
+        <div class="stat">
+          <div class="val green">36 / 36 Wins</div>
+          <div class="lbl">VTQ strictly beats EXL3 &amp; GGUF in neutral-calibration KLD (1.3–5.1× faster quant)</div>
+        </div>
+        <div class="stat">
+          <div class="val">1,476.9 GB/s</div>
+          <div class="lbl">96.4% peak HBM bandwidth on RTX PRO 6000 Blackwell for VTQ 16×256 supertiles</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ecosystem">
+      <h2>The Velri Ecosystem</h2>
+      <div class="grid">
+        <article class="card">
+          <h3><a href="https://github.com/velri-inference/velri">velri-inference/velri</a></h3>
+          <div class="tags">
+            <span class="tag">C23 / C++23</span>
+            <span class="tag">Inference Engine</span>
+            <span class="tag">VRAM Offloading</span>
+          </div>
+          <p>
+            Public C23 inference runtime (<code>Context</code>, <code>Model</code>, <code>Program</code>, <code>Session</code>),
+            cascading JSON placement planner, composable GPT-2 and Llama/Qwen2 model architectures, chunked prefill,
+            deterministic sampling, and zero hot-path allocations.
+          </p>
+          <div>
+            <a href="https://github.com/velri-inference/velri">Repository</a> ·
+            <a href="https://github.com/velri-inference/velri/blob/main/docs/EN/architecture.md">Docs</a> ·
+            <a href="https://github.com/velri-inference/velri/blob/main/llms.txt">llms.txt</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3><a href="https://github.com/velri-inference/velri-lib">velri-inference/velri-lib</a></h3>
+          <div class="tags">
+            <span class="tag">VelriLib v0.7.0</span>
+            <span class="tag">Khronos Slang AOT</span>
+            <span class="tag">Vulkan 1.3</span>
+          </div>
+          <p>
+            Standalone C23 tensor &amp; execution-graph library (<code>VelriLib::velri</code>): zero-copy tensor views,
+            liveness scratch arena planning, UMA memory budgets, 23 single-source Slang AOT CPU kernels (BLIS GEMM + VNNI),
+            and 29 <code>spirv-val</code>-verified Vulkan 1.3 shaders (<code>CoopMat</code>, FlashAttention, Split-KV).
+          </p>
+          <div>
+            <a href="https://github.com/velri-inference/velri-lib">Repository</a> ·
+            <a href="https://github.com/velri-inference/velri-lib/blob/main/docs/EN/kernels.md">Kernels</a> ·
+            <a href="https://github.com/velri-inference/velri-lib/blob/main/llms.txt">llms.txt</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3><a href="https://github.com/velri-inference/vtq-research">velri-inference/vtq-research</a></h3>
+          <div class="tags">
+            <span class="tag">VTQ (.vtq v2)</span>
+            <span class="tag">1.5–6.0 bpw</span>
+            <span class="tag">AVX2 &amp; GPU</span>
+          </div>
+          <p>
+            <strong>VTQ</strong> (<em>Velri Trellis Quant</em>): single-stream <code>16×256</code> supertiles with a 256-step
+            tail-biting Ungerboeck trellis (1,024 states, 16 subsets), Outer-DCT rotation for non-power-of-two MoE layers,
+            global Row-Fisher DP bit allocation, and zero-shuffle AVX2 <code>vpshufb</code> / GPU DP4A decoding.
+          </p>
+          <div>
+            <a href="https://github.com/velri-inference/vtq-research">Repository</a> ·
+            <a href="https://github.com/velri-inference/vtq-research/blob/main/docs/EN/paper-benchmarks.md">Benchmarks</a> ·
+            <a href="https://github.com/velri-inference/vtq-research/blob/main/llms.txt">llms.txt</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="benchmarks">
+      <h2>Verified Benchmarks</h2>
+
+      <h3>1. End-to-End 64-Token Decode (<code>TinyLlama-1.1B-Chat-v1.0</code>, W8A8, <code>batch=1</code>)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Backend</th>
+              <th>Hardware</th>
+              <th>64-Token Time</th>
+              <th>Throughput</th>
+              <th>W8A8 Projection Ceiling Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CPU (AVX2)</td>
+              <td>AMD Ryzen 9 9950X (16 physical cores, DDR5-6000)</td>
+              <td>1048.04 ms</td>
+              <td><strong>61.07 tok/s</strong></td>
+              <td>91.57% of streaming DRAM ceiling</td>
+            </tr>
+            <tr>
+              <td>CPU (AVX-512)</td>
+              <td>AMD Ryzen 9 9950X (16 physical cores, DDR5-6000)</td>
+              <td>1064.62 ms</td>
+              <td><strong>60.12 tok/s</strong></td>
+              <td>91.14% of streaming DRAM ceiling</td>
+            </tr>
+            <tr>
+              <td>Vulkan 1.3</td>
+              <td>NVIDIA RTX 5070 Ti (256-bit GDDR7)</td>
+              <td>113.64 ms</td>
+              <td><strong>563.16 tok/s</strong></td>
+              <td>76.69% weighted (95.84% on 32000×2048)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:0.9rem;color:var(--muted);">
+        Full protocol, ceiling calibrations, and SHA-256 artifacts:
+        <a href="https://github.com/velri-inference/velri/blob/main/docs/performance/decode64/README.EN.md">English Report</a> ·
+        <a href="https://github.com/velri-inference/velri/blob/main/docs/performance/decode64/README.md">Русский отчёт</a>.
+      </p>
+
+      <h3>2. VTQ vs EXL3 vs GGUF (Domain-Neutral Calibration, KLD <code>nem / mul / wt2</code>)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>Target</th>
+              <th>VTQ (<code>.vtq</code> v2)</th>
+              <th>EXL3 (<code>mul1</code>)</th>
+              <th>GGUF (<code>imatrix</code>)</th>
+              <th>Quant Speedup vs EXL3</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Llama-3.1-8B-Instruct</strong></td>
+              <td>2.5 bpw</td>
+              <td>2.51 bpw · <strong>0.130 / 0.198 / 0.150</strong></td>
+              <td>2.49 bpw · 0.153 / 0.249 / 0.162</td>
+              <td>2.75 bpw (IQ2_S) · 0.241 / 0.391 / 0.379</td>
+              <td><strong>3.3×</strong> (158.5 s vs 527.5 s)</td>
+            </tr>
+            <tr>
+              <td><strong>gemma-4-26B-A4B-it</strong> (128-Exp MoE)</td>
+              <td>2.5 bpw</td>
+              <td>2.51 bpw · <strong>0.078 / 0.132 / 0.149</strong></td>
+              <td>2.50 bpw · 0.175 / 0.261 / 0.297</td>
+              <td>3.13 bpw (IQ2_S) · 0.255 / 0.308 / 0.526</td>
+              <td><strong>4.2×</strong> (431.8 s vs 1811.4 s)</td>
+            </tr>
+            <tr>
+              <td><strong>gemma-4-26B-A4B-it</strong> (128-Exp MoE)</td>
+              <td>3.5 bpw</td>
+              <td>3.51 bpw · <strong>0.020 / 0.034 / 0.047</strong></td>
+              <td>3.49 bpw · 0.044 / 0.063 / 0.096</td>
+              <td>3.93 bpw (IQ3_M) · 0.058 / 0.074 / 0.155</td>
+              <td><strong>3.0×</strong> (483.1 s vs 1437.4 s)</td>
+            </tr>
+            <tr>
+              <td><strong>Qwen3.6-35B-A3B</strong> (256-Exp Hybrid MoE)</td>
+              <td>2.5 bpw</td>
+              <td>2.50 bpw · <strong>0.060 / 0.070 / 0.075</strong></td>
+              <td>2.52 bpw · 0.083 / 0.093 / 0.095</td>
+              <td>2.46 bpw (IQ2_S) · 0.174 / 0.182 / 0.270</td>
+              <td><strong>5.1×</strong> (791.2 s vs 4014.0 s)</td>
+            </tr>
+            <tr>
+              <td><strong>Qwen3.6-35B-A3B</strong> (256-Exp Hybrid MoE)</td>
+              <td>3.5 bpw</td>
+              <td>3.50 bpw · <strong>0.017 / 0.021 / 0.025</strong></td>
+              <td>3.51 bpw · 0.026 / 0.029 / 0.033</td>
+              <td>3.56 bpw (IQ3_M) · 0.045 / 0.046 / 0.077</td>
+              <td><strong>4.3×</strong> (904.0 s vs 3905.6 s)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:0.9rem;color:var(--muted);">
+        Full 4-bitrate tables (2.5 / 3.5 / 4.5 / 6.0 bpw) and reproduction branch:
+        <a href="https://github.com/velri-inference/vtq-research/blob/main/docs/EN/paper-benchmarks.md">Paper Benchmarks (EN)</a> ·
+        <a href="https://github.com/velri-inference/vtq-research/tree/paper-repro">paper-repro branch</a>.
+      </p>
+    </section>
+
+    <section id="quickstart">
+      <h2>Quick Build &amp; Test</h2>
+      <p style="color:var(--muted);margin-top:0;">
+        Requires CMake 3.21+, Ninja, Clang 18+ or GCC 14+ (C23), and build-time Khronos Slang (<code>slangc</code>).
+      </p>
+      <pre><code>git clone https://github.com/velri-inference/velri.git
+cd velri
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DVELRI_ENABLE_VULKAN=ON
+cmake --build build
+ctest --test-dir build --output-on-failure</code></pre>
+    </section>
+
+    <section id="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <h3>What languages are Velri and Velri-lib written in?</h3>
+        <p>C23 and C++23 behind a public C23 API, with GPU and CPU kernels written in Khronos Slang and compiled ahead of time (<code>slangc</code> AOT). Velri is <strong>not</strong> written in Rust and does <strong>not</strong> require CUDA, Python, PyTorch, or a runtime compiler.</p>
+      </div>
+      <div class="faq-item">
+        <h3>How does VTQ differ from EXL3 and GGUF?</h3>
+        <p>VTQ packs weights into self-contained 64-byte-aligned <code>16×256</code> supertiles using a 256-step tail-biting Ungerboeck trellis (1,024 states, 16 subsets), Outer-DCT input rotation (16-row granularity avoiding +9% MoE padding overhead), and global Row-Fisher DP bit allocation. It beats both EXL3 and GGUF in 36/36 neutral-calibration KLD cells while quantizing 1.3–5.1× faster than EXL3.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Does VTQ need AVX-512 to decode fast on CPU?</h3>
+        <p>No. VTQ's CPU codebooks are co-designed specifically for AVX2 <code>vpshufb</code> (<code>-mno-avx512f</code>) with zero runtime Galois popcounts and no <code>vpblendvb</code>, while using the exact same binary supertile layout as disk and GPU.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What happened to LTQ and <code>.liqk</code>?</h3>
+        <p><code>LTQ</code> and <code>.liqk</code> were earlier research milestones preserved in <code>vtq-research</code> for reproducibility. <strong>VTQ (<code>.vtq</code> v2)</strong> supersedes them as the active format for Velri.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-row">
+      <div>© 2026 Vemloir · Velri Inference · Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPLv3</a></div>
+      <div>
+        <a href="/llms.txt">llms.txt</a> ·
+        <a href="/llms-full.txt">llms-full.txt</a> ·
+        <a href="/sitemap.xml">sitemap.xml</a> ·
+        <a href="https://github.com/velri-inference">github.com/velri-inference</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
